@@ -22,6 +22,12 @@ require_once './punycode.php';
 
 $tlds = getIanaTlds('../html/main.html');
 $data = getTldsInfo($tlds, '../html/tlds/');
-echo count($data);
+// echo count($data);
+
+foreach ($data as $index => $row) {
+    if ($row['whois'] !== '') {
+        echo $index . ' -> ' . $row['whois'] . PHP_EOL;
+    }
+}
 
 ?>
