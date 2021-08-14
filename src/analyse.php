@@ -225,6 +225,9 @@ function splitHtml($htmlFile) {
     }
     foreach ($result as &$row) {
         $row = trim($row);
+        $row = str_replace('&#39;', '\'', $row);
+        $row = str_replace('&amp;', '&', $row);
+        $row = str_replace('&quot;', '"', $row);
     }
     return $result;
 }
@@ -260,7 +263,7 @@ function getHtmlType($str) { // 提取TLD类型
         case '(Restricted generic top-level domain)':
             return 'Restricted TLD';
         case '(Test top-level domain)':
-            return 'TLD for test';
+            return 'Test TLD';
         default:
             die('error analyse -> type');
     }
@@ -269,8 +272,8 @@ function getHtmlType($str) { // 提取TLD类型
 function getHtmlManager($str) { // 提取TLD所有者信息
     if ($str == '') {
         return array(
-            'manager' => '',
-            'manager_info' => ''
+            'name' => array(),
+            'addr' => array()
         );
     }
     $temp = explode('</b><br/>', $str);
@@ -278,17 +281,19 @@ function getHtmlManager($str) { // 提取TLD所有者信息
         die('error analyse -> manager');
     }
     $manager = trim($temp[0]);
+    preg_match('/\\\u[0-9a-f]{4}/', $manager, $match);
     $manager = substr($manager, 3 - strlen($manager));
     if ($manager === 'Not assigned') {
         return array(
-            'manager' => '',
-            'manager_info' => ''
+            'name' => array(),
+            'addr' => array()
         );
     }
+    $manager = explode('<br>', $manager);
     if ($temp[1] == '') {
         return array(
-            'manager' => $manager,
-            'manager_info' => ''
+            'name' => $manager,
+            'addr' => array()
         );
     }
     $temp = str_replace('<br>', '<br/>', trim($temp[1]));
@@ -303,8 +308,8 @@ function getHtmlManager($str) { // 提取TLD所有者信息
         die('error analyse -> manager');
     }
     return array(
-        'manager' => $manager,
-        'manager_addr' => $manager_addr
+        'name' => $manager,
+        'addr' => $manager_addr
     );
 }
 
@@ -370,7 +375,7 @@ function getHtmlContact($str) { // 提取联系人信息
     $flag = false;
     foreach ($temp as $line) {
         if (!$flag) {
-            $result['org'] = $line;
+            $result['org'] = preg_replace('/[\s]+/', ' ', $line);
             $flag = true;
             continue;
         }
@@ -398,15 +403,21 @@ function getHtmlContact($str) { // 提取联系人信息
     if ($result['email'] != '' && substr($result['email'], -5) !== '<br/>') {
         die('error analyse -> contact');
     }
-    $result['email'] = substr($result['email'], 0, strlen($result['email']) - 5);
+    if ($result['email'] !== '') {
+        $result['email'] = substr($result['email'], 0, strlen($result['email']) - 5);
+    }
     if ($result['voice'] != '' && substr($result['voice'], -5) !== '<br/>') {
         die('error analyse -> contact');
     }
-    $result['voice'] = substr($result['voice'], 0, strlen($result['voice']) - 5);
+    if ($result['voice'] !== '') {
+        $result['voice'] = substr($result['voice'], 0, strlen($result['voice']) - 5);
+    }
     if ($result['fax'] != '' && substr($result['fax'], -5) !== '<br/>') {
         die('error analyse -> contact');
     }
-    $result['fax'] = substr($result['fax'], 0, strlen($result['fax']) - 5);
+    if ($result['fax'] !== '') {
+        $result['fax'] = substr($result['fax'], 0, strlen($result['fax']) - 5);
+    }
     if ($result['fax'] === 'n/a' || $result['fax'] === 'NA' || $result['fax'] === 'N/A' || $result['fax'] === '-') {
         $result['fax'] = '';
     }
@@ -476,12 +487,6 @@ function getHtmlNS($str) { // 提取TLD名称服务器
 }
 
 function getHtmlInfo($str) { // 获取官网/Whois服务器信息
-    // if ($str == '') {
-    //     return array(
-    //         'website' => '',
-    //         'whois' => ''
-    //     );
-    // }
     preg_match_all('/<p>[\s\S]+?<\/p>/', $str, $match);
     if (count($match) !== 1) {
         die('error analyse -> info');

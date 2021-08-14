@@ -8,7 +8,7 @@ function getTldsInfo($tldList, $htmlDir) { // 抓取各个TLD数据
             die('error analyse -> title');
         }
         $info['type'] = getHtmlType($html['type']);
-        $info += getHtmlManager($html['manager']);
+        $info['manager'] = getHtmlManager($html['manager']);
         $info['admin_contact'] = getHtmlContact($html['admin']);
         $info['tech_contact'] = getHtmlContact($html['tech']);
         $info['nameserver'] = getHtmlNS($html['ns']);
