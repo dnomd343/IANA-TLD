@@ -97,9 +97,8 @@ function isVoice($str) {
     return false;
 }
 
-function splitHtml($htmlFile) {
+function splitHtml($html) {
     // Get core part
-    $html = file_get_contents($htmlFile);
     $html = explode('main_right">', $html)[1];
     $html = explode('<div id="sidebar_left', $html)[0];
     $html = explode('<script>', $html)[0];
