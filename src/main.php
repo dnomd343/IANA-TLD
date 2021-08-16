@@ -6,7 +6,7 @@ require_once './tld-list.php';
 require_once './punycode.php';
 require_once './interface.php';
 
-$release_path = '../release/';
+$release_path = '../temp/';
 shell_exec('mkdir -p ' . $release_path);
 
 // Load ICP info
@@ -40,7 +40,7 @@ foreach ($tlds as $index => $tld) {
         die('error -> fail to load page');
     }
     $info = $iana->getTldInfo('.' . $tld, $html_content);
-    $tldInfo[] = $info;
+    $tldInfo[$tld] = $info;
     echo PHP_EOL;
 }
 
@@ -94,7 +94,7 @@ $data = array(
     'iana' => $tldInfo,
     'version' => date('Y-m-d')
 );
-writeFile($release_path . 'tldInfo.json', json_encode($data));
+writeFile($release_path . 'tldInfo.min.json', json_encode($data));
 echo "\033[32mOK\033[0m" . PHP_EOL;
 
 // Output whois server list by csv format
