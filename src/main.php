@@ -40,7 +40,7 @@ foreach ($tlds as $index => $tld) {
         die('error -> fail to load page');
     }
     $info = $iana->getTldInfo('.' . $tld, $html_content);
-    $tldInfo[$tld] = $info;
+    $tldInfo['.' . $tld] = $info;
     echo PHP_EOL;
 }
 
