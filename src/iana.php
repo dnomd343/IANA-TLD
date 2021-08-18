@@ -271,10 +271,7 @@ class IANA { // 获取IANA顶级域名信息
 
     private function getHtmlManager($str) { // 提取TLD所有者信息
         if ($str == '') {
-            return array(
-                'name' => array(),
-                'addr' => array()
-            );
+            return array();
         }
         $temp = explode('</b><br/>', $str);
         if (count($temp) !== 2) {
@@ -284,10 +281,7 @@ class IANA { // 获取IANA顶级域名信息
         preg_match('/\\\u[0-9a-f]{4}/', $manager, $match);
         $manager = substr($manager, 3 - strlen($manager));
         if ($manager === 'Not assigned') {
-            return array(
-                'name' => array(),
-                'addr' => array()
-            );
+            return array();
         }
         $manager = explode('<br>', $manager);
         if ($temp[1] == '') {

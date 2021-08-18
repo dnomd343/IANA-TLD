@@ -2,6 +2,7 @@
 
 require_once './icp.php';
 require_once './iana.php';
+require_once './dnssec.php';
 require_once './tld-list.php';
 require_once './punycode.php';
 require_once './interface.php';
@@ -19,6 +20,24 @@ $icpInfo = (new ICP)->getIcpTld($csv_content);
 // remark: this page can't be fetch on some IP address
 $html_content = file_get_contents('../data/tld-list.html');
 $tldList = (new TldList)->getTlds($html_content);
+
+// Get DNSSEC Info
+$html_contant = curl('http://stats.research.icann.org/dns/tld_report/');
+$dnssecObj = new DNSSEC;
+$dnssecList = $dnssecObj->getDnssecStatus($html_contant);
+foreach ($dnssecList as $tld => $content) {
+    echo $tld;
+    $content = $dnssecObj->getDsRecord($tld);
+    if ($content === 'error') {
+        sleep(5); // 延迟5s
+        $content = $dnssecObj->getDsRecord($tld);
+        if ($content === 'error') {
+            die('error -> ds query fail');
+        }
+    }
+    $dnssecList[$tld]['ds'] = $content;
+    echo PHP_EOL;
+}
 
 // Get TLD list from IANA website
 $html_content = curl('https://www.iana.org/domains/root/db');
@@ -42,6 +61,22 @@ foreach ($tlds as $index => $tld) {
     $info = $iana->getTldInfo('.' . $tld, $html_content);
     $tldInfo['.' . $tld] = $info;
     echo PHP_EOL;
+}
+
+// Add DNSSEC field for tldInfo
+foreach ($dnssecList as $tld => $dnssec) {
+    if (!isset($tldInfo[$tld])) {
+        die('error -> wrong match');
+    }
+}
+foreach ($tldInfo as $tld => $info) {
+    if (isset($dnssecList[$tld])) {
+        $tldInfo[$tld]['active'] = 'yes';
+        $tldInfo[$tld]['dnssec'] = $dnssecList[$tld];
+    } else {
+        $tldInfo[$tld]['active'] = 'no';
+        $tldInfo[$tld]['dnssec'] = array();
+    }
 }
 
 // Remove the TLD which not exist in IANA
@@ -114,6 +149,7 @@ $init_iana_sql =<<<EOF
 CREATE TABLE iana (
     tld            TEXT  NOT NULL,
     type           TEXT  NOT NULL,
+    active         TEXT  NOT NULL,
     manager        TEXT  NOT NULL,
     admin_contact  TEXT  NOT NULL,
     tech_contact   TEXT  NOT NULL,
@@ -121,7 +157,8 @@ CREATE TABLE iana (
     website        TEXT  NOT NULL,
     whois          TEXT  NOT NULL,
     last_updated   TEXT  NOT NULL,
-    regist_date    TEXT  NOT NULL
+    regist_date    TEXT  NOT NULL,
+    dnssec         TEXT  NOT NULL
 );
 EOF;
 $init_list_sql =<<<EOF
@@ -144,16 +181,19 @@ $db->exec($init_list_sql);
 $db->exec($init_icp_sql);
 
 $insert_sql = 'INSERT INTO iana ';
-$insert_sql .= '(tld,type,manager,admin_contact,tech_contact,nameserver,website,whois,last_updated,regist_date) ';
+$insert_sql .= '(tld,type,active,manager,admin_contact,tech_contact,nameserver,website,whois,last_updated,regist_date,dnssec) ';
 $insert_sql .= 'VALUES (';
 foreach ($tldInfo as $tld => $info) {
     $sql = $insert_sql . '\'' . $tld . '\',';
+    $sql .= '\'' . $info['type'] . '\',';
+    $sql .= '\'' . $info['active'] . '\',';
     foreach ($info as $index => $field) {
-        if ($index === 'manager' || $index === 'admin_contact' || $index === 'tech_contact' || $index === 'nameserver') {
+        if ($index === 'active' || $index === 'type') { continue; }
+        if ($index === 'manager' || $index === 'admin_contact' || $index === 'tech_contact' || $index === 'nameserver' || $index === 'dnssec') {
             $field = base64_encode(json_encode($field));
         }
         $sql .= '\'' . $field . '\'';
-        if ($index !== 'regist_date') {
+        if ($index !== 'dnssec') {
             $sql .= ',';
         }
     }
